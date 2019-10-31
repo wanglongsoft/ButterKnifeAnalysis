@@ -15,7 +15,19 @@
 &emsp;&emsp;ButterKnife完成View的绑定，有三个重要组成部分: 注解处理(annotationProcessor)，注解定义，注入注解(ButterKnife.bind(this);),该
 Demo分别新建三个Module完成这三个功能，annotation(java-library, 定义注解)，compiler(java-library，注解处理器)，bind(android-library，注入
 注解)，并在工程中调用这些模块
-## 注解处理器(APT)有
+## 注解处理器(APT)
 &emsp;&emsp;自定义注解处理器需要继承AbstractProcessor，该抽象类有４个常用方法　　
-init(ProcessingEnvironment processingEnv)　所有的注解处理器类都必须有一个无参构造函数。然而，有一个特殊的方法init()，它会被注解处理工具调
+1. init(ProcessingEnvironment processingEnv)　所有的注解处理器类都必须有一个无参构造函数。然而，有一个特殊的方法init()，它会被注解处理工具调
 用，以ProcessingEnvironment作为参数，ProcessingEnvironment 提供了一些实用的工具类Elements, Types和Filer，Messager(打印信息)
+2. init(ProcessingEnvironment processingEnv)　所有的注解处理器类都必须有一个无参构造函数。然而，有一个特殊的方法init()，它会被注解处理工具调
+用，以ProcessingEnvironment作为参数，ProcessingEnvironment 提供了一些实用的工具类Elements, Types和Filer，Messager(打印信息)
+#### １　Module依赖配置
+```java
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    compileOnly 'com.google.auto.service:auto-service:1.0-rc6'
+    annotationProcessor 'com.google.auto.service:auto-service:1.0-rc6'
+    compile 'com.squareup:javapoet:1.11.1'
+    implementation project(path: ':annotation')
+}
+```
