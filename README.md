@@ -19,9 +19,10 @@ Demo分别新建三个Module完成这三个功能，annotation(java-library, 定
 &emsp;&emsp;自定义注解处理器需要继承AbstractProcessor，该抽象类有４个常用方法　　
 1. init(ProcessingEnvironment processingEnv)　所有的注解处理器类都必须有一个无参构造函数。然而，有一个特殊的方法init()，它会被注解处理工具调
 用，以ProcessingEnvironment作为参数，ProcessingEnvironment 提供了一些实用的工具类Elements, Types和Filer，Messager(打印信息)
-2. init(ProcessingEnvironment processingEnv)　所有的注解处理器类都必须有一个无参构造函数。然而，有一个特殊的方法init()，它会被注解处理工具调
-用，以ProcessingEnvironment作为参数，ProcessingEnvironment 提供了一些实用的工具类Elements, Types和Filer，Messager(打印信息)
-#### １　Module依赖配置
+2. getSupportedAnnotationTypes()　配置需要处理的注解，只有配置了的注解才会走 process() 方法
+3. getSupportedSourceVersion() 配置支持的JDK版本
+4. process() 进行解析注解，创建文件操作，相当于程序的主函数
+####  1. Module依赖配置
 ```java
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
@@ -31,3 +32,68 @@ dependencies {
     implementation project(path: ':annotation')
 }
 ```
+####  2. BindView注解解析
+```java
+void parseBindView(RoundEnvironment roundEnv,  Map<TypeElement, BindSet> builderMap) {
+    printNoteMessege("parseBindView ======  Start");
+    for (Element element : roundEnv.getElementsAnnotatedWith(BindView.class)) {
+        TypeElement enclosingElement = (TypeElement) element.getEnclosingElement();
+        VariableElement variableElement = (VariableElement) element;
+        int valueID = element.getAnnotation(BindView.class).value();
+        TypeMirror elementType = enclosingElement.asType();
+        TypeName typeName = TypeName.get(elementType);
+        if (!builderMap.containsKey(enclosingElement)) {
+            builderMap.put(enclosingElement, new BindSet(enclosingElement, typeName, messager));
+        }
+        BindSet bindSet = builderMap.get(enclosingElement);
+        bindSet.dealBindView(valueID, variableElement);
+    }
+    printNoteMessege("parseBindView ======  End");
+}
+####  3. OnClickw注解解析
+```java
+void parseOnClick(RoundEnvironment roundEnv, Map<TypeElement, BindSet> builderMap) {
+    printNoteMessege("parseOnClick ======  Start");
+    for (Element element : roundEnv.getElementsAnnotatedWith(OnClick.class)) {
+        TypeElement enclosingElement = (TypeElement) element.getEnclosingElement();
+        ExecutableElement executableElement = (ExecutableElement) element;
+        int valueID = executableElement.getAnnotation(OnClick.class).value();
+        TypeMirror elementType = enclosingElement.asType();
+        TypeName typeName = TypeName.get(elementType);
+        if (!builderMap.containsKey(enclosingElement)) {
+            builderMap.put(enclosingElement, new BindSet(enclosingElement, typeName, messager));
+        }
+        BindSet bindSet = builderMap.get(enclosingElement);
+        bindSet.dealonClick(valueID, executableElement);
+    }
+    printNoteMessege("parseOnClick ======  End");
+}
+```
+####  4. 文件生成
+```java
+@Override
+public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+    printNoteMessege("process ======  Start");
+    Map<TypeElement, BindSet> builderMap = findAndParseTargets(roundEnv);
+    for (Map.Entry<TypeElement, BindSet> entry : builderMap.entrySet()) {
+        BindSet binding = entry.getValue();
+        JavaFile javaFile = binding.brewJava();
+        try {
+            javaFile.writeTo(filer);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    printNoteMessege("process ======  End");
+    return false;
+}
+private Map<TypeElement, BindSet> findAndParseTargets(RoundEnvironment env) {
+    printNoteMessege("findAndParseTargets ======  Start");
+    Map<TypeElement, BindSet> builderMap = new LinkedHashMap<>();
+    parseBindView(env, builderMap);
+    parseOnClick(env, builderMap);
+    printNoteMessege("findAndParseTargets ======  End");
+    return builderMap;
+}
+```
+####  5. APT注解解析常用知识介绍
