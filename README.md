@@ -97,3 +97,15 @@ private Map<TypeElement, BindSet> findAndParseTargets(RoundEnvironment env) {
 }
 ```
 ####  5. APT注解解析常用知识介绍
+* PackageElement表示一个包程序元素，提供对有关包及其成员的信息的访问
+* ExecutableElement表示某个类或接口的方法、构造函数或者初始化程序
+* TypeElement表示一个类或者接口的程序元素，提供对有关类型及其成员的信息的访问。
+* VariableElement表示一个字段、enum常量、方法或者构造方法参数、局部变量等等
+* getEnclosedElements() 返回该元素直接包含的子元素
+* getEnclosingElement() 返回包含该element的父element，与上一个方法相反
+* getkind() 返回该element的类型，判断是哪种element
+* getModifiers() 返回修饰的关键字，如：public，static，final等等
+* getSimpleName() 返回名字，不带包名
+* getQualifiedName() 获取全名，如果是类，包含完整的包名路径
+* getReturnType() 获取方法元素的返回值
+* getParameters() 获取方法的参数元素，每一个元素都是VariableElement
