@@ -109,3 +109,137 @@ private Map<TypeElement, BindSet> findAndParseTargets(RoundEnvironment env) {
 * getQualifiedName() 获取全名，如果是类，包含完整的包名路径
 * getReturnType() 获取方法元素的返回值
 * getParameters() 获取方法的参数元素，每一个元素都是VariableElement
+## 注解定义
+#### BindView注解
+```java
+@Retention(RetentionPolicy.CLASS)　 //编译期注解
+@Target(ElementType.FIELD)　　//作用于变量
+public @interface BindView {
+    int value();
+}
+```
+#### OnClick注解
+```java
+@Target(ElementType.METHOD)　　//作用于方法
+@Retention(RetentionPolicy.CLASS)　 //编译期注解
+@ListenerClass(
+        targetType = "android.view.View",
+        setter = "setOnClickListener",
+        type = "View.OnClickListener",
+        method = @ListenerMethod(
+                name = "onClick"
+        )
+)
+public @interface OnClick {
+    int value();
+}
+```
+ListenerClass注解实现
+```java
+@Target(ElementType.ANNOTATION_TYPE)
+@Retention(RetentionPolicy.RUNTIME)//必须是RUNTIME，否则注解嵌套时，该注解引用失败
+public @interface ListenerClass {
+    String targetType();
+    String setter();
+    String type();
+    ListenerMethod method();
+}
+```
+ListenerMethod注解实现
+```java
+@Target(ElementType.FIELD)
+@Retention(RetentionPolicy.RUNTIME)//必须是RUNTIME，否则注解嵌套时，该注解引用失败
+public @interface ListenerMethod {
+    String name();
+    String parameters() default "";
+    String returnType() default "void";
+    String defaultReturn() default "null";
+}
+```
+## 注入注解bind
+#### bind函数实现
+```java
+public static void bind(Activity target) { //参数是Activity，可通过Activity引用画面的变量和方法
+    View sourceView = target.getWindow().getDecorView();
+    bind(target, sourceView);
+}    
+public static void bind( Activity target, View source) {
+    Class<?> targetClass = target.getClass();
+    String clsName = targetClass.getName();
+    Class<?> bindingClass = null;
+    try {
+        bindingClass = targetClass.getClassLoader().loadClass(clsName + "_ViewBinding");
+        //加载clsName + "_ViewBinding　类，该类由注解处理器自动生成
+        //自动生成类路径：app⁩/build/generated/⁨source⁩/apt⁩/debug/⁨soft⁩/znmd/butterknifeanalysis⁩
+        //自动生成类名称： MainActivity_ViewBinding.java
+        if(null != bindingClass) {
+            try {
+            　　//获取类的构造方法
+                Constructor<?> constructor = bindingClass.getConstructor(targetClass, View.class);
+                if(null != constructor) {
+                    try {
+                        constructor.newInstance(target, source);//新建一个实例
+                    } catch (IllegalAccessException e) {
+                        e.printStackTrace();
+                    } catch (InstantiationException e) {
+                        e.printStackTrace();
+                    } catch (InvocationTargetException e) {
+                        e.printStackTrace();
+                    }
+                }
+            } catch (NoSuchMethodException e) {
+                e.printStackTrace();
+            }
+        }
+    } catch (ClassNotFoundException e) {
+        e.printStackTrace();
+    }
+}
+```
+## 画面调用
+主Activity
+```java
+    @BindView(R.id.button)
+    Button mButton;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        MyButterKnifeBind.bind(this); //画面注入
+    }
+
+    @OnClick(R.id.button)
+    void doClick() {
+        Log.d(TAG, "doClick: mButton");
+    }
+
+    @OnClick(R.id.button_view)
+    void doButtonClick() {
+        Log.d(TAG, "doButtonClick: ");
+        Intent intent = new Intent();
+        intent.setClass(MainActivity.this, SecondActivity.class);
+        startActivity(intent);
+    }
+```
+自动生成的MainActivity_ViewBinding.java
+```java
+public MainActivity_ViewBinding(final MainActivity target, View source) {
+  this.target = target;
+  target.mButton = (Button) source.findViewById(2131165250);
+  target.mButton.setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View view) {
+      target.doClick();
+      }
+      });
+  Button mButton2131165253;
+      mButton2131165253 = (Button) source.findViewById(2131165253);
+      mButton2131165253.setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View view) {
+      target.doButtonClick();
+      }
+      });
+}
+```
